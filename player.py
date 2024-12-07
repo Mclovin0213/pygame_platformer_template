@@ -15,7 +15,7 @@ class Player(pygame.sprite.Sprite):
         # Get the first frame for initial setup
         self.image = self.animation.sprites['idle'][0]
         self.rect = self.image.get_rect(topleft=pos)
-        self.hitbox = self.rect.inflate(-20, -10)
+        self.hitbox = self.rect.inflate(-20, 0)
         
         # Movement
         self.direction = pygame.math.Vector2()
@@ -113,10 +113,12 @@ class Player(pygame.sprite.Sprite):
             if sprite.hitbox.colliderect(self.hitbox):
                 if self.direction.y > 0:  # Moving down
                     self.hitbox.bottom = sprite.hitbox.top
+                    self.rect.bottom = self.hitbox.bottom  # Update rect to match hitbox
                     self.direction.y = 0
                     self.on_ground = True
                 elif self.direction.y < 0:  # Moving up
                     self.hitbox.top = sprite.hitbox.bottom
+                    self.rect.top = self.hitbox.top  # Update rect to match hitbox
                     self.direction.y = 0
         
         # Check one-way platform collisions
@@ -125,6 +127,7 @@ class Player(pygame.sprite.Sprite):
                 if sprite.hitbox.colliderect(self.hitbox):
                     if self.direction.y > 0 and self.hitbox.bottom <= sprite.hitbox.centery:
                         self.hitbox.bottom = sprite.hitbox.top
+                        self.rect.bottom = self.hitbox.bottom  # Update rect to match hitbox
                         self.direction.y = 0
                         self.on_ground = True
                         break
