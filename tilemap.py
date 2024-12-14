@@ -18,7 +18,8 @@ class Tile(pygame.sprite.Sprite):
             self.image = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
         
         self.rect = self.image.get_rect(topleft=pos)
-        self.hitbox = self.rect.inflate(0, -10) if self.properties.get('solid', False) else pygame.Rect(0, 0, 0, 0)
+        # Create hitbox for any tile that needs collision detection
+        self.hitbox = self.rect.inflate(0, -10) if self.properties.get('has_hitbox', False) else pygame.Rect(0, 0, 0, 0)
         
         # Animation setup
         self.animation_frames = []

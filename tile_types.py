@@ -20,18 +20,21 @@ class TileType(Enum):
 TILE_PROPERTIES = {
     TileType.EMPTY: {
         'solid': False,
+        'has_hitbox': False,
         'damage': 0,
         'image': None,
         'animation_frames': [],
     },
     TileType.SOLID: {
         'solid': True,
+        'has_hitbox': True,
         'damage': 0,
         'image': '1.png',
         'animation_frames': [],
     },
     TileType.PLATFORM: {
         'solid': True,
+        'has_hitbox': True,
         'damage': 0,
         'image': '2.png',
         'animation_frames': [],
@@ -39,24 +42,28 @@ TILE_PROPERTIES = {
     },
     TileType.LADDER: {
         'solid': False,
+        'has_hitbox': True,
         'climbable': True,
         'image': '3.png',
         'animation_frames': [],
     },
     TileType.CONVEYOR_LEFT: {
         'solid': True,
+        'has_hitbox': True,
         'speed': -2,
         'image': '4.png',
         'animation_frames': ['conveyor_1.png', 'conveyor_2.png', 'conveyor_3.png'],
     },
     TileType.CONVEYOR_RIGHT: {
         'solid': True,
+        'has_hitbox': True,
         'speed': 2,
         'image': '5.png',
         'animation_frames': ['conveyor_1.png', 'conveyor_2.png', 'conveyor_3.png'],
     },
     TileType.DESTRUCTIBLE: {
         'solid': True,
+        'has_hitbox': True,
         'health': 1,
         'image': '6.png',
         'animation_frames': [],
@@ -64,35 +71,41 @@ TILE_PROPERTIES = {
     },
     TileType.SPIKE: {
         'solid': False,
+        'has_hitbox': True,
         'damage': 1,
         'image': '7.png',
         'animation_frames': [],
     },
     TileType.POWERUP_SPAWN: {
         'solid': False,
+        'has_hitbox': False,
         'powerup_type': None,  # Set when creating level
         'image': None,  # Invisible spawn point
         'animation_frames': [],
     },
     TileType.ENEMY_SPAWN: {
         'solid': False,
+        'has_hitbox': False,
         'enemy_type': None,  # Set when creating level
         'image': None,  # Invisible spawn point
         'animation_frames': [],
     },
     TileType.CHECKPOINT: {
         'solid': False,
+        'has_hitbox': True,
         'image': '10.png',
         'animation_frames': ['checkpoint_1.png', 'checkpoint_2.png'],
         'activated': False,
     },
     TileType.FINISH: {
         'solid': False,
+        'has_hitbox': True,
         'image': '11.png',
         'animation_frames': ['finish_1.png', 'finish_2.png'],
     },
     TileType.BACKGROUND: {
         'solid': False,
+        'has_hitbox': False,
         'damage': 0,
         'image': 'background.png',
         'animation_frames': [],
