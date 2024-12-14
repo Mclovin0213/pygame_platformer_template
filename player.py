@@ -7,13 +7,12 @@ class Player(pygame.sprite.Sprite):
         super().__init__(groups)
         
         # Animation setup
-        self.animation = Animation()
+        self.animation = Animation('idle')
         self.animation.load_sprite_sheets(PLAYER_SPRITES_PATH)
-        self.state = 'idle'
         self.facing_right = True
         
         # Get the first frame for initial setup
-        self.image = self.animation.sprites['idle'][0]
+        self.image = self.animation.get_current_frame()
         self.rect = self.image.get_rect(topleft=pos)
         self.hitbox = self.rect.inflate(-20, 0)
         
@@ -42,20 +41,20 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_RIGHT]:
             self.direction.x = 1
             self.facing_right = True
-            self.state = 'run'
+            self.animation.set_state('run')
         elif keys[pygame.K_LEFT]:
             self.direction.x = -1
             self.facing_right = False
-            self.state = 'run'
+            self.animation.set_state('run')
         else:
             self.direction.x = 0
             if self.on_ground:
-                self.state = 'idle'
+                self.animation.set_state('idle')
         
         # Jump
         if keys[pygame.K_SPACE] and self.on_ground:
             self.direction.y = self.jump_speed
-            self.state = 'jump'
+            self.animation.set_state('jump')
 
     def apply_gravity(self):
         self.direction.y += self.gravity
@@ -135,15 +134,15 @@ class Player(pygame.sprite.Sprite):
         # Update rect position
         self.rect.centery = self.hitbox.centery
         
-    def animate(self, dt):
-        current_frame = self.animation.animate(self.state, dt)
-        if current_frame:
-            self.image = current_frame
-            if not self.facing_right:
-                self.image = pygame.transform.flip(self.image, True, False)
-
     def update(self, dt):
         self.input()
+        self.apply_gravity()
         self.horizontal_collisions()
         self.vertical_collisions()
-        self.animate(dt)
+        
+        # Update animation
+        self.image = self.animation.update(dt)
+        if self.facing_right:
+            self.image = self.animation.get_current_frame()
+        else:
+            self.image = self.animation.get_current_frame(flip_x=True)

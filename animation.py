@@ -3,10 +3,13 @@ import os
 from settings import *
 
 class Animation:
-    def __init__(self):
+    def __init__(self, default_state='idle'):
         self.sprites = {}
         self.current_frame = 0
         self.animation_time = 0
+        self.current_state = default_state
+        self.previous_state = default_state
+        self.state_changed = False
 
     def load_sprite_sheets(self, path, scale=1):
         """
@@ -32,16 +35,47 @@ class Animation:
                             image = pygame.transform.scale(image, (new_width, new_height))
                         self.sprites[state].append(image)
 
-    def animate(self, state, dt):
+    def set_state(self, new_state):
         """
-        Returns the current frame of the animation for the given state
+        Change the current animation state
+        Returns True if the state was changed
         """
-        if state not in self.sprites:
+        if new_state not in self.sprites:
+            return False
+            
+        if new_state != self.current_state:
+            self.previous_state = self.current_state
+            self.current_state = new_state
+            self.current_frame = 0
+            self.animation_time = 0
+            self.state_changed = True
+            return True
+        return False
+
+    def get_current_frame(self, flip_x=False):
+        """
+        Returns the current frame of animation
+        """
+        if self.current_state not in self.sprites:
+            return None
+            
+        current_frame = self.sprites[self.current_state][self.current_frame]
+        if flip_x:
+            return pygame.transform.flip(current_frame, True, False)
+        return current_frame
+
+    def update(self, dt):
+        """
+        Update animation state
+        Returns the current frame
+        """
+        if self.current_state not in self.sprites:
             return None
 
         self.animation_time += dt
         if self.animation_time >= ANIMATION_SPEED:
             self.animation_time = 0
-            self.current_frame = (self.current_frame + 1) % len(self.sprites[state])
+            self.current_frame = (self.current_frame + 1) % len(self.sprites[self.current_state])
+            self.state_changed = False
 
-        return self.sprites[state][self.current_frame]
+        return self.sprites[self.current_state][self.current_frame]
