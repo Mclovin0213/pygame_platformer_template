@@ -15,6 +15,8 @@ class TileType(Enum):
     CHECKPOINT = 10
     FINISH = 11
     BACKGROUND = 12
+    PORTAL_SET_1 = 13
+    PORTAL_SET_2 = 14
 
 # Define properties for each tile type
 TILE_PROPERTIES = {
@@ -110,5 +112,23 @@ TILE_PROPERTIES = {
         'image': 'background.png',
         'animation_frames': [],
         'layer': 'background'
+    },
+    TileType.PORTAL_SET_1: {
+        'solid': False,
+        'has_hitbox': True,
+        'damage': 0,
+        'image': 'portal_1.png',
+        'animation_frames': [],
+        'portal_type': 1,
+        'cooldown': 1000,  # Cooldown in milliseconds
+    },
+    TileType.PORTAL_SET_2: {
+        'solid': False,
+        'has_hitbox': True,
+        'damage': 0,
+        'image': 'portal_2.png',
+        'animation_frames': [],
+        'portal_type': 2,
+        'cooldown': 1000,  # Cooldown in milliseconds
     },
 }

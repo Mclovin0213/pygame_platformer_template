@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO,
                    datefmt='%H:%M:%S')
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None):
+    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None):
         super().__init__(groups)
         
         # Animation setup
@@ -34,12 +34,14 @@ class Player(pygame.sprite.Sprite):
         self.platform_sprites = platform_sprites or pygame.sprite.Group()
         self.ladder_sprites = ladder_sprites or pygame.sprite.Group()
         self.conveyor_sprites = conveyor_sprites or pygame.sprite.Group()
+        self.portal_sprites = portal_sprites or pygame.sprite.Group()
         
         # State flags
         self.on_ladder = False
         self.on_platform = False
         self.on_conveyor = False
         self.is_climbing = False  # New state to track if actually climbing
+        self.near_portal = False
 
     def input(self):
         keys = pygame.key.get_pressed()
@@ -81,6 +83,15 @@ class Player(pygame.sprite.Sprite):
         if keys[pygame.K_SPACE] and self.on_ground and not self.is_climbing:
             self.direction.y = self.jump_speed
             self.animation.set_state('jump')
+        
+        # Portal interaction
+        if self.near_portal and keys[pygame.K_UP]:
+            portal_collisions = pygame.sprite.spritecollide(self, self.portal_sprites, False)
+            if portal_collisions:
+                portal = portal_collisions[0]
+                if hasattr(portal, 'teleport'):
+                    portal.teleport(self)
+                    logging.info("Player teleported through portal")
 
     def apply_gravity(self):
         self.direction.y += self.gravity
@@ -160,6 +171,13 @@ class Player(pygame.sprite.Sprite):
         self.rect.centery = self.hitbox.centery
         
     def update(self, dt):
+        # Check portal collision
+        self.near_portal = False
+        portal_collisions = pygame.sprite.spritecollide(self, self.portal_sprites, False)
+        if portal_collisions:
+            self.near_portal = True
+            logging.info("Player near portal")
+        
         self.input()
         self.apply_gravity()
         self.horizontal_collisions()

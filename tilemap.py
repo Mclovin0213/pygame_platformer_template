@@ -43,6 +43,30 @@ class Tile(pygame.sprite.Sprite):
                 self.current_frame = (self.current_frame + 1) % len(self.animation_frames)
                 self.image = self.animation_frames[self.current_frame]
 
+class Portal(Tile):
+    def __init__(self, pos, tile_type, groups):
+        super().__init__(pos, tile_type, groups)
+        self.last_used = 0  # Timestamp of last portal use
+        self.linked_portal = None  # Will be set by TileMap
+        
+    def can_use(self):
+        current_time = pygame.time.get_ticks()
+        return current_time - self.last_used >= self.properties['cooldown']
+        
+    def teleport(self, player):
+        if self.can_use() and self.linked_portal:
+            current_time = pygame.time.get_ticks()
+            # Update cooldown for both portals
+            self.last_used = current_time
+            self.linked_portal.last_used = current_time
+            # Teleport player to linked portal
+            player.rect.centerx = self.linked_portal.rect.centerx
+            player.rect.bottom = self.linked_portal.rect.bottom
+            player.hitbox.centerx = player.rect.centerx
+            player.hitbox.bottom = player.rect.bottom
+            return True
+        return False
+
 class TileMap:
     def __init__(self, game):
         self.game = game
@@ -55,16 +79,19 @@ class TileMap:
         self.destructible_tiles = pygame.sprite.Group()
         self.hazard_tiles = pygame.sprite.Group()
         self.background_tiles = pygame.sprite.Group()
+        self.portal_tiles = pygame.sprite.Group()  # New group for portals
+        self.portals = {'1': [], '2': []}  # Store portals by type
         
         self.tile_list = {}
         self.entity_list = {}
     
     def get_sprite_group(self, tile_type):
-        """Returns appropriate sprite groups for the given tile type"""
+        """Get the appropriate sprite group(s) for a tile type"""
         groups = [self.all_sprites]
         
-        # Check if it's a background tile
-        if TILE_PROPERTIES[tile_type].get('layer') == 'background':
+        if tile_type == TileType.PORTAL_SET_1 or tile_type == TileType.PORTAL_SET_2:
+            groups.append(self.portal_tiles)
+        elif TILE_PROPERTIES[tile_type].get('layer') == 'background':
             groups.append(self.background_tiles)
             return groups
             
@@ -95,12 +122,16 @@ class TileMap:
                     self.tile_list[tile_type] = pygame.image.load(image_path).convert_alpha()
 
     def create_tile(self, tile_type, pos):
-        """Create a tile of the specified type at the given position"""
-        if tile_type == TileType.EMPTY:
-            return None
-            
-        sprite_groups = self.get_sprite_group(tile_type)
-        return Tile(pos, tile_type, sprite_groups)
+        if tile_type in [TileType.PORTAL_SET_1, TileType.PORTAL_SET_2]:
+            portal = Portal(pos, tile_type, self.get_sprite_group(tile_type))
+            portal_type = str(TILE_PROPERTIES[tile_type]['portal_type'])
+            self.portals[portal_type].append(portal)
+            # Link portals if we have a pair
+            if len(self.portals[portal_type]) == 2:
+                self.portals[portal_type][0].linked_portal = self.portals[portal_type][1]
+                self.portals[portal_type][1].linked_portal = self.portals[portal_type][0]
+            return portal
+        return Tile(pos, tile_type, self.get_sprite_group(tile_type))
 
     def load_map(self, level_data):
         """Create a level from the level data dictionary"""
@@ -156,6 +187,19 @@ class TileMap:
         
         # If no spawn point found, return default
         return default_spawn
+
+    def check_portal_interaction(self, player):
+        # Check if player is pressing up key
+        keys = pygame.key.get_pressed()
+        if not keys[pygame.K_UP]:
+            return
+            
+        # Check collision with any portal
+        for portal_set in self.portals.values():
+            for portal in portal_set:
+                if player.hitbox.colliderect(portal.hitbox):
+                    portal.teleport(player)
+                    return
 
     def update(self, dt):
         """Update all tiles (for animations, etc.)"""

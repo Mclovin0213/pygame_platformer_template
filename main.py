@@ -46,7 +46,8 @@ class Game:
             collision_sprites=self.tilemap.solid_tiles,
             platform_sprites=self.tilemap.platform_tiles,
             ladder_sprites=self.tilemap.ladder_tiles,
-            conveyor_sprites=self.tilemap.conveyor_tiles
+            conveyor_sprites=self.tilemap.conveyor_tiles,
+            portal_sprites=self.tilemap.portal_tiles
         )
 
     def run(self):
