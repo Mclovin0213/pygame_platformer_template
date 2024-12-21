@@ -12,6 +12,16 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None):
         super().__init__(groups)
         
+        # Player stats
+        self.max_health = 3
+        self.health = self.max_health
+        self.lives = 3
+        self.coins = 0
+        self.invulnerable = False
+        self.invulnerable_timer = 0
+        self.invulnerability_duration = 1000
+        self.initial_pos = pos
+        
         # Animation setup
         self.animation = Animation('idle')
         self.animation.load_sprite_sheets(PLAYER_SPRITES_PATH)
@@ -169,7 +179,27 @@ class Player(pygame.sprite.Sprite):
         
         # Update rect position
         self.rect.centery = self.hitbox.centery
-        
+    
+    def take_damage(self, amount):
+        if not self.invulnerable:
+            self.health -= amount
+            self.invulnerable = True
+            self.invulnerable_timer = pygame.time.get_ticks()
+            
+            if self.health <= 0:
+                self.lives -= 1
+                if self.lives > 0:
+                    self.respawn()
+                return True  # Player died
+        return False
+
+    def respawn(self):
+        self.health = self.max_health
+        self.hitbox.topleft = self.initial_pos
+        self.rect.topleft = self.initial_pos
+        self.direction = pygame.math.Vector2()
+        self.on_ground = False
+    
     def update(self, dt):
         # Check portal collision
         self.near_portal = False
@@ -182,6 +212,12 @@ class Player(pygame.sprite.Sprite):
         self.apply_gravity()
         self.horizontal_collisions()
         self.vertical_collisions()
+        
+        # Update invulnerability
+        if self.invulnerable:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.invulnerable_timer >= self.invulnerability_duration:
+                self.invulnerable = False
         
         # Update animation
         self.image = self.animation.update(dt)
