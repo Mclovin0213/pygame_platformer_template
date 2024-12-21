@@ -69,6 +69,7 @@ TILE_PROPERTIES = {
         'health': 1,
         'image': '6.png',
         'animation_frames': [],
+        'destructible': True,
         'break_effect': 'break_particles',
     },
     TileType.SPIKE: {
