@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO,
                    datefmt='%H:%M:%S')
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None):
+    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None, checkpoint_tiles=None):
         super().__init__(groups)
         
         # Player stats
@@ -21,6 +21,7 @@ class Player(pygame.sprite.Sprite):
         self.invulnerable_timer = 0
         self.invulnerability_duration = 1000
         self.initial_pos = pos
+        self.checkpoint_pos = pos  # Store last checkpoint position
         
         # Animation setup
         self.animation = Animation('idle')
@@ -41,6 +42,7 @@ class Player(pygame.sprite.Sprite):
         
         # Collision
         self.collision_sprites = collision_sprites
+        self.checkpoint_tiles = checkpoint_tiles or pygame.sprite.Group()
         self.platform_sprites = platform_sprites or pygame.sprite.Group()
         self.ladder_sprites = ladder_sprites or pygame.sprite.Group()
         self.conveyor_sprites = conveyor_sprites or pygame.sprite.Group()
@@ -195,8 +197,8 @@ class Player(pygame.sprite.Sprite):
 
     def respawn(self):
         self.health = self.max_health
-        self.hitbox.topleft = self.initial_pos
-        self.rect.topleft = self.initial_pos
+        self.hitbox.topleft = self.checkpoint_pos
+        self.rect.topleft = self.checkpoint_pos
         self.direction = pygame.math.Vector2()
         self.on_ground = False
     
@@ -207,6 +209,13 @@ class Player(pygame.sprite.Sprite):
         if portal_collisions:
             self.near_portal = True
             logging.info("Player near portal")
+        
+        # Check checkpoint collision
+        checkpoint_hits = pygame.sprite.spritecollide(self, self.checkpoint_tiles, False)
+        if checkpoint_hits:
+            checkpoint = checkpoint_hits[0]
+            self.checkpoint_pos = checkpoint.rect.topleft
+            logging.info(f"Checkpoint reached at position: {self.checkpoint_pos}")
         
         self.input()
         self.apply_gravity()

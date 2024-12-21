@@ -75,6 +75,7 @@ class TileMap:
         self.solid_tiles = pygame.sprite.Group()
         self.platform_tiles = pygame.sprite.Group()
         self.ladder_tiles = pygame.sprite.Group()
+        self.checkpoint_tiles = pygame.sprite.Group()
         self.conveyor_tiles = pygame.sprite.Group()
         self.destructible_tiles = pygame.sprite.Group()
         self.hazard_tiles = pygame.sprite.Group()
@@ -94,7 +95,11 @@ class TileMap:
         elif TILE_PROPERTIES[tile_type].get('layer') == 'background':
             groups.append(self.background_tiles)
             return groups
-            
+        
+        if tile_type == TileType.CHECKPOINT:
+            groups.append(self.checkpoint_tiles)
+            return groups
+        
         # Add to appropriate groups based on properties
         if TILE_PROPERTIES[tile_type].get('solid', False):
             groups.append(self.solid_tiles)
