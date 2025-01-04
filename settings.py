@@ -16,6 +16,7 @@ GRAVITY = 0.3
 # Asset paths
 TILE_SET_PATH = 'assets/tiles'
 PLAYER_SPRITES_PATH = 'assets/player'
+ENEMY_SPRITES_PATH = 'assets/enemies'  # Add enemy sprites path
 
 # Animation settings
 ANIMATION_SPEED = 0.15  # Lower number = faster animation

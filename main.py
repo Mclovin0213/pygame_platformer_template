@@ -6,6 +6,7 @@ from tilemap import TileMap
 from camera import Camera
 from tile_types import TILE_PROPERTIES
 from level_data import LEVEL_1, parse_level_data
+from enemy import Enemy, EnemyType
 
 class Game:
     def __init__(self):
@@ -20,6 +21,7 @@ class Game:
         # Sprite groups
         self.all_sprites = pygame.sprite.Group()
         self.collision_sprites = pygame.sprite.Group()
+        self.enemy_sprites = pygame.sprite.Group()  # New group for enemies
         
         # Setup
         self.tilemap = TileMap(self)
@@ -41,6 +43,18 @@ class Game:
         
         # Create the level using the new level data format
         self.tilemap.load_map(LEVEL_1)
+        
+        # Create enemies from level data
+        for entity in LEVEL_1['entities']:
+            if entity['type'] == 'enemy':
+                pos = (entity['position'][0] * TILE_SIZE, entity['position'][1] * TILE_SIZE)
+                enemy_type = EnemyType(entity.get('enemy_type', 'walker'))  # Default to walker if not specified
+                Enemy(
+                    pos=pos,
+                    enemy_type=enemy_type,
+                    groups=[self.all_sprites, self.enemy_sprites],
+                    collision_sprites=self.tilemap.solid_tiles
+                )
         
         # Create player instance
         player_spawn = self.tilemap.get_player_spawn()
@@ -86,6 +100,13 @@ class Game:
                     if self.player.take_damage(damage):  # Player died
                         if self.player.lives <= 0:
                             self.game_over = True
+                
+                # Check for enemy collisions
+                enemy_hits = pygame.sprite.spritecollide(self.player, self.enemy_sprites, False)
+                for enemy in enemy_hits:
+                    if self.player.take_damage(enemy.damage):  # Player died
+                        if self.player.lives <= 0:
+                            self.game_over = True
             
                 # Draw all sprites with camera offset
                 for sprite in self.tilemap.all_sprites:
@@ -125,6 +146,7 @@ class Game:
         # Clear all sprites
         self.all_sprites.empty()
         self.collision_sprites.empty()
+        self.enemy_sprites.empty()
         
         # Reload the level
         self.setup_level()
