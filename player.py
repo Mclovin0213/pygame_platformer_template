@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO,
                    datefmt='%H:%M:%S')
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None, checkpoint_tiles=None):
+    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None, checkpoint_tiles=None, pickup_sprites=None):
         super().__init__(groups)
         
         # Player stats
@@ -47,6 +47,7 @@ class Player(pygame.sprite.Sprite):
         self.ladder_sprites = ladder_sprites or pygame.sprite.Group()
         self.conveyor_sprites = conveyor_sprites or pygame.sprite.Group()
         self.portal_sprites = portal_sprites or pygame.sprite.Group()
+        self.pickup_sprites = pickup_sprites or pygame.sprite.Group()
         
         # State flags
         self.on_ladder = False
@@ -203,7 +204,8 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
     
     def update(self, dt):
-        # Check portal collision
+        """Update player state"""
+        # Check portal interaction
         self.near_portal = False
         portal_collisions = pygame.sprite.spritecollide(self, self.portal_sprites, False)
         if portal_collisions:
@@ -217,7 +219,10 @@ class Player(pygame.sprite.Sprite):
             self.checkpoint_pos = checkpoint.rect.topleft
             logging.info(f"Checkpoint reached at position: {self.checkpoint_pos}")
         
+        # Get input
         self.input()
+        
+        # Apply movement
         self.apply_gravity()
         self.horizontal_collisions()
         self.vertical_collisions()
@@ -234,3 +239,9 @@ class Player(pygame.sprite.Sprite):
             self.image = self.animation.get_current_frame()
         else:
             self.image = self.animation.get_current_frame(flip_x=True)
+        
+        # Check pickup collection
+        if self.pickup_sprites:
+            for pickup in self.pickup_sprites:
+                if self.hitbox.colliderect(pickup.hitbox):
+                    pickup.collect(self)

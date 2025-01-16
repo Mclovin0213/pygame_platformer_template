@@ -109,13 +109,14 @@ class Game:
         player_spawn = self.tilemap.get_player_spawn()
         self.player = Player(
             pos=player_spawn,
-            groups=[self.all_sprites, self.collision_sprites],
+            groups=[self.all_sprites],
             collision_sprites=self.tilemap.solid_tiles,
             platform_sprites=self.tilemap.platform_tiles,
             ladder_sprites=self.tilemap.ladder_tiles,
             conveyor_sprites=self.tilemap.conveyor_tiles,
             portal_sprites=self.tilemap.portal_tiles,
-            checkpoint_tiles=self.tilemap.checkpoint_tiles
+            checkpoint_tiles=self.tilemap.checkpoint_tiles,
+            pickup_sprites=self.tilemap.pickup_tiles  # Add pickup sprites
         )
 
     def run(self):
@@ -199,7 +200,7 @@ class Game:
         # Draw health
         health_text = self.font.render(f'Health: {self.player.health}', True, (255, 255, 255))
         self.screen.blit(health_text, (10, 50))
-        
+
         # Draw coins
         coins_text = self.font.render(f'Coins: {self.player.coins}', True, (255, 255, 255))
         self.screen.blit(coins_text, (10, 90))

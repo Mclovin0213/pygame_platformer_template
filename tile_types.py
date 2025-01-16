@@ -17,6 +17,8 @@ class TileType(Enum):
     BACKGROUND = 12
     PORTAL_SET_1 = 13
     PORTAL_SET_2 = 14
+    PICKUP_COIN = 15
+    PICKUP_ONEUP = 16
 
 # Define properties for each tile type
 TILE_PROPERTIES = {
@@ -131,5 +133,22 @@ TILE_PROPERTIES = {
         'animation_frames': [],
         'portal_type': 2,
         'cooldown': 1000,  # Cooldown in milliseconds
+    },
+    TileType.PICKUP_COIN: {
+        'solid': False,
+        'has_hitbox': True,
+        'damage': 0,
+        'image': 'coin.png',
+        'value': 1,
+        'pickup_type': 'coin'
+    },
+    TileType.PICKUP_ONEUP: {
+        'solid': False,
+        'has_hitbox': True,
+        'damage': 0,
+        'image': 'apple.png',
+        'animation_frames': ['oneup_1.png', 'oneup_2.png'],
+        'value': 1,
+        'pickup_type': 'oneup'
     },
 }
