@@ -114,77 +114,132 @@ class Player(pygame.sprite.Sprite):
 
     def horizontal_collisions(self):
         """Handle horizontal collisions with solid tiles and conveyors"""
-        self.hitbox.x += self.direction.x * self.speed
+        # Apply horizontal movement
+        movement = self.direction.x * self.speed
+        self.hitbox.x += movement
         
-        # Check conveyor belt effects
-        for sprite in self.conveyor_sprites:
-            if sprite.hitbox.colliderect(self.hitbox):
-                logging.info(f"Player on Conveyor tile type {sprite.tile_type.name} at position {sprite.rect.topleft}")
-                self.on_conveyor = True
-                conveyor_speed = TILE_PROPERTIES[sprite.tile_type].get('speed', 0)
-                self.hitbox.x += conveyor_speed
-                break
-        else:
-            self.on_conveyor = False
+        # Create a combined list of relevant collision objects
+        collision_objects = []
+        # Add solid tiles first as they take priority
+        collision_objects.extend((sprite, 'solid') for sprite in self.collision_sprites)
+        # Add conveyor tiles with their properties
+        collision_objects.extend((sprite, 'conveyor') for sprite in self.conveyor_sprites)
         
-        # Check solid collisions
-        for sprite in self.collision_sprites:
+        self.on_conveyor = False
+        
+        # Check all collisions in one pass
+        for sprite, obj_type in collision_objects:
             if sprite.hitbox.colliderect(self.hitbox):
-                logging.info(f"Player colliding horizontally with Solid tile type {sprite.tile_type.name} at position {sprite.rect.topleft}")
-                if self.direction.x < 0:  # Moving left
-                    self.hitbox.left = sprite.hitbox.right
-                elif self.direction.x > 0:  # Moving right
-                    self.hitbox.right = sprite.hitbox.left
-                
+                if obj_type == 'solid':
+                    # Handle solid collision
+                    if self.direction.x < 0:  # Moving left
+                        self.hitbox.left = sprite.hitbox.right
+                    elif self.direction.x > 0:  # Moving right
+                        self.hitbox.right = sprite.hitbox.left
+                    break  # Exit after first solid collision
+                elif obj_type == 'conveyor' and not self.on_conveyor:
+                    # Only apply conveyor if no solid collision occurred
+                    self.on_conveyor = True
+                    conveyor_speed = TILE_PROPERTIES[sprite.tile_type].get('speed', 0)
+                    # Check if applying conveyor speed would cause a collision
+                    self.hitbox.x += conveyor_speed
+                    # Check if this would cause a collision with a solid
+                    for solid in self.collision_sprites:
+                        if solid.hitbox.colliderect(self.hitbox):
+                            # Revert conveyor movement if it would cause collision
+                            self.hitbox.x -= conveyor_speed
+                            break
+        
         # Update rect position
         self.rect.centerx = self.hitbox.centerx
-    
+
     def vertical_collisions(self):
         """Handle vertical collisions with solid tiles, platforms, and ladders"""
-        # Check ladder collisions first
+        # First check ladder collisions as they don't need complex resolution
         self.on_ladder = False
         for sprite in self.ladder_sprites:
             if sprite.hitbox.colliderect(self.hitbox):
                 self.on_ladder = True
-                logging.info(f"Player colliding with Ladder tile at position {sprite.rect.topleft}")
+                logging.info("Player touching ladder")
                 break
             
         # Apply gravity only if not climbing
         if not self.is_climbing:
             self.direction.y += self.gravity
             
-        self.hitbox.y += self.direction.y
+        # Store original position for platform checks
+        original_y = self.hitbox.y
+        next_y = original_y + self.direction.y
         
-        # Check platform and solid collisions
+        logging.debug(f"Player Y movement: original_y={original_y:.2f}, next_y={next_y:.2f}, direction.y={self.direction.y:.2f}")
+        
+        # First check platforms when moving downward
         self.on_ground = False
-        for sprite in self.collision_sprites:
-            if sprite.hitbox.colliderect(self.hitbox):
-                logging.info(f"Player colliding with Solid tile type {sprite.tile_type.name} at position {sprite.rect.topleft}")
-                if self.direction.y > 0:  # Moving down
-                    self.hitbox.bottom = sprite.hitbox.top
-                    self.rect.bottom = self.hitbox.bottom
+        if self.direction.y > 0:  # Only check platforms when falling
+            logging.info(f"Number of platform sprites: {len(self.platform_sprites)}")
+            
+            # Calculate player center for more precise platform detection
+            player_center_x = self.hitbox.centerx
+            
+            # Sort platforms by distance to player center for more accurate collision detection
+            sorted_platforms = sorted(
+                self.platform_sprites,
+                key=lambda sprite: abs(sprite.hitbox.centerx - player_center_x)
+            )
+            
+            for sprite in sorted_platforms:
+                logging.debug(f"Checking platform at position {sprite.rect.topleft}")
+                logging.debug(f"Platform hitbox: top={sprite.hitbox.top}, bottom={sprite.hitbox.bottom}")
+                logging.debug(f"Player hitbox: x={self.hitbox.x}, width={self.hitbox.width}")
+                logging.debug(f"Platform hitbox: x={sprite.hitbox.x}, width={sprite.hitbox.width}")
+                
+                # Add horizontal tolerance for platform edges (half of tile size)
+                edge_tolerance = TILE_SIZE // 2
+                
+                # Check if we're horizontally within the platform's bounds (with tolerance)
+                horizontally_aligned = (
+                    self.hitbox.right > sprite.hitbox.left - edge_tolerance and 
+                    self.hitbox.left < sprite.hitbox.right + edge_tolerance
+                )
+                
+                # We're falling and were above the platform in the previous frame
+                was_above = original_y + self.hitbox.height <= sprite.hitbox.top + 5
+                will_intersect = next_y + self.hitbox.height > sprite.hitbox.top
+                
+                logging.debug(f"Horizontally aligned with platform: {horizontally_aligned}")
+                logging.debug(f"Was above platform: {was_above}")
+                logging.debug(f"Will intersect platform: {will_intersect}")
+                
+                if horizontally_aligned and was_above and will_intersect:
+                    logging.info(f"Landing on platform at y={sprite.hitbox.top}")
+                    self.hitbox.y = sprite.hitbox.top - self.hitbox.height
                     self.direction.y = 0
                     self.on_ground = True
-                elif self.direction.y < 0:  # Moving up
-                    self.hitbox.top = sprite.hitbox.bottom
-                    self.rect.top = self.hitbox.top
-                    self.direction.y = 0
+                    break
         
-        # Check one-way platform collisions
+        # If we haven't landed on a platform, apply movement and check solid collisions
         if not self.on_ground:
-            for sprite in self.platform_sprites:
+            self.hitbox.y = next_y
+            logging.debug("Checking solid collisions")
+            for sprite in self.collision_sprites:
                 if sprite.hitbox.colliderect(self.hitbox):
-                    logging.info(f"Player colliding with Platform tile at position {sprite.rect.topleft}")
-                    if self.direction.y > 0 and self.hitbox.bottom <= sprite.hitbox.centery:
+                    if self.direction.y > 0:  # Moving down
+                        logging.info(f"Landing on solid tile at y={sprite.hitbox.top}")
                         self.hitbox.bottom = sprite.hitbox.top
-                        self.rect.bottom = self.hitbox.bottom
                         self.direction.y = 0
                         self.on_ground = True
-                        break
+                    elif self.direction.y < 0:  # Moving up
+                        logging.info(f"Hitting ceiling at y={sprite.hitbox.bottom}")
+                        self.hitbox.top = sprite.hitbox.bottom
+                        self.direction.y = 0
+                    break
+        
+        # Log final position
+        logging.debug(f"Final position: y={self.hitbox.y:.2f}, on_ground={self.on_ground}, direction.y={self.direction.y:.2f}")
         
         # Update rect position
         self.rect.centery = self.hitbox.centery
-    
+
     def take_damage(self, amount):
         if not self.invulnerable:
             self.health -= amount
