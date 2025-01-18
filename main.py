@@ -7,6 +7,7 @@ from camera import Camera
 from tile_types import TILE_PROPERTIES
 from level_data import LEVEL_1, LEVEL_2, parse_level_data
 from enemy import Enemy, EnemyType
+from music_manager import MusicManager
 import os
 
 class Button:
@@ -45,6 +46,18 @@ class Game:
         self.game_over = False
         self.game_state = "title"  # Can be "title" or "game"
         self.game_complete = False
+        
+        # Music setup
+        self.music_manager = MusicManager()
+        # Set default music paths - you can change these using set_menu_music and set_game_music
+        default_menu_music = os.path.join('assets', 'music', 'menu_music.mp3')
+        default_game_music = os.path.join('assets', 'music', 'game_music.mp3')
+        default_death_music = os.path.join('assets', 'music', 'death_music.mp3')
+        default_victory_music = os.path.join('assets', 'music', 'victory_music.mp3')
+        self.music_manager.set_menu_music(default_menu_music)
+        self.music_manager.set_game_music(default_game_music)
+        self.music_manager.set_death_music(default_death_music)
+        self.music_manager.set_victory_music(default_victory_music)
         
         # Title screen setup
         title_bg_path = os.path.join('assets', 'menu', 'title_bg.png')
@@ -153,7 +166,6 @@ class Game:
             # No more levels, game complete
             self.game_complete = True
             self.game_state = "game_complete"
-            # Optionally add a game complete screen or reset
 
     def reset_game(self):
         """
@@ -171,10 +183,18 @@ class Game:
         # Clear existing sprite groups
         self.all_sprites.empty()
         
+        # Start game music
+        self.music_manager.stop_music()
+        self.music_manager.play_game_music()
+        
         # Recreate the game setup
         self.setup_game()
 
     def run(self):
+        """Main game loop"""
+        # Start menu music when game launches
+        self.music_manager.play_menu_music()
+        
         while True:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -183,7 +203,7 @@ class Game:
                 
                 if self.game_state == "title":
                     if self.start_button.handle_event(event):
-                        self.reset_game()  # Use reset_game instead of directly setting up
+                        self.reset_game()  # This will now handle music transition
                     if self.quit_button.handle_event(event):
                         pygame.quit()
                         sys.exit()
@@ -203,13 +223,17 @@ class Game:
                     if self.player.check_finish_collision():
                         self.game_complete = True
                         self.game_state = "game_complete"
+                        # Play victory music when reaching finish line
+                        self.music_manager.stop_music()
+                        self.music_manager.play_victory_music()
                 
                 elif self.game_state == "game_complete":
                     # Handle game complete screen events
                     if self.game_complete_button_restart.handle_event(event):
-                        # Reset to title screen
+                        # Switch back to menu music when returning to menu
+                        self.music_manager.stop_music()
+                        self.music_manager.play_menu_music()
                         self.game_state = "title"
-                        self.game_complete = False
                     if self.game_complete_button_quit.handle_event(event):
                         pygame.quit()
                         sys.exit()
@@ -281,6 +305,12 @@ class Game:
         self.screen.blit(coins_text, (10, 90))
     
     def draw_game_over(self):
+        # Stop current music and play death music
+        if not hasattr(self, 'current_music') or self.current_music != "death":
+            self.music_manager.stop_music()
+            self.music_manager.play_death_music()
+            self.current_music = "death"
+            
         game_over_text = self.font.render('Game Over! Press R to restart', True, (255, 255, 255))
         text_rect = game_over_text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
         self.screen.blit(game_over_text, text_rect)
