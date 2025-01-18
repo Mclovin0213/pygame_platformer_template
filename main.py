@@ -8,6 +8,8 @@ from tile_types import TILE_PROPERTIES
 from level_data import LEVEL_1, LEVEL_2, parse_level_data
 from enemy import Enemy, EnemyType
 from music_manager import MusicManager
+from parallax_background import ParallaxBackground
+from background_config import LEVEL_BACKGROUNDS
 import os
 
 class Button:
@@ -96,9 +98,12 @@ class Game:
         self.levels = [LEVEL_1, LEVEL_2]  # List of available levels
         self.current_level_index = 0
         
+        # Initialize background before setup_game
+        self.background = ParallaxBackground()
+        
         # Game setup
         self.setup_game()
-
+        
     def setup_game(self):
         # Sprite groups
         self.all_sprites = pygame.sprite.Group()
@@ -153,6 +158,11 @@ class Game:
             next_level_tiles=self.tilemap.next_level_tiles,
             finish_tiles=self.tilemap.finish_tiles  # Add finish tiles
         )
+        
+        # Load level-specific backgrounds
+        if self.current_level['name'] in LEVEL_BACKGROUNDS:
+            for image_path, scroll_speed in LEVEL_BACKGROUNDS[self.current_level['name']]:
+                self.background.add_layer(image_path, scroll_speed)
 
     def load_next_level(self):
         """
@@ -275,6 +285,9 @@ class Game:
                             if self.player.lives <= 0:
                                 self.game_over = True
                 
+                    # Draw parallax background
+                    self.background.draw(self.screen, self.camera.x)
+                    
                     # Draw all sprites with camera offset
                     for sprite in self.tilemap.all_sprites:
                         self.screen.blit(sprite.image, self.camera.apply(sprite))

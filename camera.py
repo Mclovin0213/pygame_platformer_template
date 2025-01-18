@@ -27,3 +27,13 @@ class Camera:
         y = max(-(self.height - WINDOW_HEIGHT), y)  # bottom side
         
         self.camera = pygame.Rect(x, y, self.width, self.height)
+        
+    @property
+    def x(self):
+        """Get the camera's x position"""
+        return self.camera.x
+        
+    @property
+    def y(self):
+        """Get the camera's y position"""
+        return self.camera.y
