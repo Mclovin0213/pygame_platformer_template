@@ -19,6 +19,7 @@ class TileType(Enum):
     PORTAL_SET_2 = 14
     PICKUP_COIN = 15
     PICKUP_ONEUP = 16
+    NEXT_LEVEL = 17
 
 # Define properties for each tile type
 TILE_PROPERTIES = {
@@ -105,8 +106,8 @@ TILE_PROPERTIES = {
     TileType.FINISH: {
         'solid': False,
         'has_hitbox': True,
-        'image': '11.png',
-        'animation_frames': ['finish_1.png', 'finish_2.png'],
+        'image': 'finish_1.png',
+        'animation_frames': [],
     },
     TileType.BACKGROUND: {
         'solid': False,
@@ -150,5 +151,12 @@ TILE_PROPERTIES = {
         'animation_frames': ['oneup_1.png', 'oneup_2.png'],
         'value': 1,
         'pickup_type': 'oneup'
+    },
+    TileType.NEXT_LEVEL: {
+        'solid': False,
+        'has_hitbox': True,
+        'damage': 0,
+        'image': "4.png",  # Invisible spawn point
+        'animation_frames': [],
     },
 }

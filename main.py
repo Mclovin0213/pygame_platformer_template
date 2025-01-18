@@ -5,7 +5,7 @@ from player import Player
 from tilemap import TileMap
 from camera import Camera
 from tile_types import TILE_PROPERTIES
-from level_data import LEVEL_1, parse_level_data
+from level_data import LEVEL_1, LEVEL_2, parse_level_data
 from enemy import Enemy, EnemyType
 import os
 
@@ -44,6 +44,7 @@ class Game:
         self.font = pygame.font.Font(None, 36)
         self.game_over = False
         self.game_state = "title"  # Can be "title" or "game"
+        self.game_complete = False
         
         # Title screen setup
         title_bg_path = os.path.join('assets', 'menu', 'title_bg.png')
@@ -63,9 +64,28 @@ class Game:
         self.start_button = Button(center_x, start_y, BUTTON_WIDTH, BUTTON_HEIGHT, "Start Game")
         self.quit_button = Button(center_x, start_y + BUTTON_HEIGHT + BUTTON_PADDING, BUTTON_WIDTH, BUTTON_HEIGHT, "Quit")
         
+        self.game_complete_button_restart = Button(
+            WINDOW_WIDTH // 2 - BUTTON_WIDTH // 2, 
+            WINDOW_HEIGHT // 2 + 50, 
+            BUTTON_WIDTH, 
+            BUTTON_HEIGHT, 
+            "Back to Menu"
+        )
+        self.game_complete_button_quit = Button(
+            WINDOW_WIDTH // 2 - BUTTON_WIDTH // 2, 
+            WINDOW_HEIGHT // 2 + 150, 
+            BUTTON_WIDTH, 
+            BUTTON_HEIGHT, 
+            "Quit Game"
+        )
+        
+        self.current_level = LEVEL_1  # Track current level
+        self.levels = [LEVEL_1, LEVEL_2]  # List of available levels
+        self.current_level_index = 0
+        
         # Game setup
         self.setup_game()
-    
+
     def setup_game(self):
         # Sprite groups
         self.all_sprites = pygame.sprite.Group()
@@ -85,16 +105,16 @@ class Game:
 
     def setup_level(self):
         """
-        Example level setup - modify this to load your own levels
+        Load the current level
         """
         # Load tileset
         self.tilemap.load_tileset(TILE_SET_PATH)
         
-        # Create the level using the new level data format
-        self.tilemap.load_map(LEVEL_1)
+        # Create the level using the current level data
+        self.tilemap.load_map(self.current_level)
         
         # Create enemies from level data
-        for entity in LEVEL_1['entities']:
+        for entity in self.current_level['entities']:
             if entity['type'] == 'enemy':
                 pos = (entity['position'][0] * TILE_SIZE, entity['position'][1] * TILE_SIZE)
                 enemy_type = EnemyType(entity.get('enemy_type', 'walker'))  # Default to walker if not specified
@@ -116,8 +136,43 @@ class Game:
             conveyor_sprites=self.tilemap.conveyor_tiles,
             portal_sprites=self.tilemap.portal_tiles,
             checkpoint_tiles=self.tilemap.checkpoint_tiles,
-            pickup_sprites=self.tilemap.pickup_tiles  # Add pickup sprites
+            pickup_sprites=self.tilemap.pickup_tiles,
+            next_level_tiles=self.tilemap.next_level_tiles,
+            finish_tiles=self.tilemap.finish_tiles  # Add finish tiles
         )
+
+    def load_next_level(self):
+        """
+        Load the next level
+        """
+        self.current_level_index += 1
+        if self.current_level_index < len(self.levels):
+            self.current_level = self.levels[self.current_level_index]
+            self.setup_level()
+        else:
+            # No more levels, game complete
+            self.game_complete = True
+            self.game_state = "game_complete"
+            # Optionally add a game complete screen or reset
+
+    def reset_game(self):
+        """
+        Fully reset the game to its initial state
+        """
+        # Reset game state variables
+        self.game_over = False
+        self.game_complete = False
+        self.game_state = "game"
+        
+        # Reset level progression
+        self.current_level_index = 0
+        self.current_level = self.levels[0]
+        
+        # Clear existing sprite groups
+        self.all_sprites.empty()
+        
+        # Recreate the game setup
+        self.setup_game()
 
     def run(self):
         while True:
@@ -128,7 +183,7 @@ class Game:
                 
                 if self.game_state == "title":
                     if self.start_button.handle_event(event):
-                        self.game_state = "game"
+                        self.reset_game()  # Use reset_game instead of directly setting up
                     if self.quit_button.handle_event(event):
                         pygame.quit()
                         sys.exit()
@@ -143,6 +198,21 @@ class Game:
                         if event.type == pygame.KEYDOWN and self.game_over:
                             if event.key == pygame.K_r:
                                 self.reset_game()
+                    
+                    # Check for game completion
+                    if self.player.check_finish_collision():
+                        self.game_complete = True
+                        self.game_state = "game_complete"
+                
+                elif self.game_state == "game_complete":
+                    # Handle game complete screen events
+                    if self.game_complete_button_restart.handle_event(event):
+                        # Reset to title screen
+                        self.game_state = "title"
+                        self.game_complete = False
+                    if self.game_complete_button_quit.handle_event(event):
+                        pygame.quit()
+                        sys.exit()
             
             self.screen.fill(BLACK)
             
@@ -161,9 +231,10 @@ class Game:
                     self.all_sprites.update(dt)
                     self.camera.update(self.player)
                 
-                    # Draw
-                    self.screen.fill(BLACK)
-                    
+                    # Check for level progression
+                    if self.player.check_next_level_collision():
+                        self.load_next_level()
+                
                     # Check for hazard collisions
                     hazard_hits = pygame.sprite.spritecollide(self.player, self.tilemap.hazard_tiles, False)
                     for hazard in hazard_hits:
@@ -190,6 +261,10 @@ class Game:
                 else:
                     self.draw_game_over()        
             
+            elif self.game_state == "game_complete":
+                # Draw game complete screen
+                self.draw_game_complete_screen()
+            
             pygame.display.flip()
 
     def draw_hud(self):
@@ -210,17 +285,22 @@ class Game:
         text_rect = game_over_text.get_rect(center=(WINDOW_WIDTH/2, WINDOW_HEIGHT/2))
         self.screen.blit(game_over_text, text_rect)
     
-    def reset_game(self):
-        # Reset game state
-        self.game_over = False
+    def draw_game_complete_screen(self):
+        """Draw game completion screen"""
+        # Semi-transparent overlay
+        overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 128))  # Black with 50% transparency
+        self.screen.blit(overlay, (0, 0))
         
-        # Clear all sprites
-        self.all_sprites.empty()
-        self.collision_sprites.empty()
-        self.enemy_sprites.empty()
+        # Game complete text
+        font_large = pygame.font.Font(None, 72)
+        game_complete_text = font_large.render("Congratulations!", True, WHITE)
+        text_rect = game_complete_text.get_rect(center=(WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2 - 100))
+        self.screen.blit(game_complete_text, text_rect)
         
-        # Reload the level
-        self.setup_level()
+        # Draw buttons
+        self.game_complete_button_restart.draw(self.screen)
+        self.game_complete_button_quit.draw(self.screen)
 
 if __name__ == '__main__':
     game = Game()

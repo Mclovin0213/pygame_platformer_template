@@ -100,6 +100,8 @@ class TileMap:
         self.background_tiles = pygame.sprite.Group()
         self.portal_tiles = pygame.sprite.Group()
         self.pickup_tiles = pygame.sprite.Group()
+        self.next_level_tiles = pygame.sprite.Group()
+        self.finish_tiles = pygame.sprite.Group()
         self.portals = {'1': [], '2': []}
         
         self.tile_list = {}
@@ -130,6 +132,10 @@ class TileMap:
             groups.append(self.portal_tiles)
         elif tile_type in [TileType.PICKUP_COIN, TileType.PICKUP_ONEUP]:
             groups.append(self.pickup_tiles)
+        elif tile_type == TileType.NEXT_LEVEL:
+            groups.append(self.next_level_tiles)
+        elif tile_type == TileType.FINISH:
+            groups.append(self.finish_tiles)
             
         return groups
 
@@ -175,6 +181,8 @@ class TileMap:
         self.background_tiles.empty()
         self.portal_tiles.empty()
         self.pickup_tiles.empty()
+        self.next_level_tiles.empty()
+        self.finish_tiles.empty()
         self.entity_list.clear()  # Clear the dictionary
         
         # Parse level data

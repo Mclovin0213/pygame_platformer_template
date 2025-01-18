@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO,
                    datefmt='%H:%M:%S')
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None, checkpoint_tiles=None, pickup_sprites=None):
+    def __init__(self, pos, groups, collision_sprites, platform_sprites=None, ladder_sprites=None, conveyor_sprites=None, portal_sprites=None, checkpoint_tiles=None, pickup_sprites=None, next_level_tiles=None, finish_tiles=None):
         super().__init__(groups)
         
         # Player stats
@@ -48,6 +48,8 @@ class Player(pygame.sprite.Sprite):
         self.conveyor_sprites = conveyor_sprites or pygame.sprite.Group()
         self.portal_sprites = portal_sprites or pygame.sprite.Group()
         self.pickup_sprites = pickup_sprites or pygame.sprite.Group()
+        self.next_level_tiles = next_level_tiles or pygame.sprite.Group()
+        self.finish_tiles = finish_tiles or pygame.sprite.Group()
         
         # State flags
         self.on_ladder = False
@@ -203,6 +205,22 @@ class Player(pygame.sprite.Sprite):
         self.direction = pygame.math.Vector2()
         self.on_ground = False
     
+    def check_next_level_collision(self):
+        next_level_hits = pygame.sprite.spritecollide(self, self.next_level_tiles, False)
+        for tile in next_level_hits:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_UP]:
+                # Trigger level progression logic
+                return True
+        return False
+
+    def check_finish_collision(self):
+        """
+        Check if player has collided with the finish tile
+        """
+        finish_hits = pygame.sprite.spritecollide(self, self.finish_tiles, False)
+        return len(finish_hits) > 0
+
     def update(self, dt):
         """Update player state"""
         # Check portal interaction
@@ -218,6 +236,14 @@ class Player(pygame.sprite.Sprite):
             checkpoint = checkpoint_hits[0]
             self.checkpoint_pos = checkpoint.rect.topleft
             logging.info(f"Checkpoint reached at position: {self.checkpoint_pos}")
+        
+        # Check next level collision
+        if self.check_next_level_collision():
+            logging.info("Player reached next level")
+        
+        # Check finish collision
+        if self.check_finish_collision():
+            logging.info("Player reached finish")
         
         # Get input
         self.input()
